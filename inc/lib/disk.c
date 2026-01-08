@@ -2,7 +2,7 @@
  * Minimal PIO-based (non-interrupt-driven) IDE driver code.
  * For information about what all this IDE/ATA magic means,
  * see the materials available on the class references page.
- *
+ *///
  * 2024: INTERRUPT-based is added to the IDE driver code (el7 :))
  */
 

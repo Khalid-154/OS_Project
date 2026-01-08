@@ -15,7 +15,7 @@
  * server's address space at DISKMAP + (n*BLKSIZE). */
 #define DISKMAP		0x10000000
 
-/* Maximum disk size we can handle (3GB) */
+/* Maximum disk size we can handle (3GB) */ ////
 #define DISKSIZE	0xC0000000
 
 /* ide.c */

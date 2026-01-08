@@ -2,7 +2,7 @@
 #include <inc/elf.h>
 
 /**********************************************************************
- * This a dirt simple boot loader, whose sole job is to boot
+ * This a dirt simple boot loader, whose sole job is to boot ////
  * an elf kernel image from the first IDE hard disk.
  *
  * DISK LAYOUT

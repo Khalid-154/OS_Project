@@ -1,5 +1,5 @@
 #include <inc/lib.h>
-
+////////////////// MERGE SORT USING STATIC ARRAYS ////////////////////////
 #define SIZE 100000
 int __Left[SIZE] ;
 int __Right[SIZE] ;
