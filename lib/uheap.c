@@ -1,4 +1,37 @@
 #include <inc/lib.h>
+#include <inc/queue.h>
+
+#define MAX_USER_CHUNKS 4000
+
+struct UserHeapChunk
+{
+	uint32 startVA;
+	uint32 size;
+	bool isFree;
+
+	LIST_ENTRY(UserHeapChunk)prev_next_info;
+	};
+
+LIST_HEAD(UserChunksList,UserHeapChunk);
+static struct UserChunksList UserChunks;
+
+
+//uint32 uheapPageAllocStart=0;
+//uint32 uheapPageAllocBreak =0;
+//uint32 uheapPlaceStategy =0;
+
+
+static struct UserHeapChunk chunkspool[MAX_USER_CHUNKS];
+static int next_chunk_index=0;
+
+static struct UserHeapChunk* allocChunk()
+{
+	if(next_chunk_index>=MAX_USER_CHUNKS)
+	{
+		return NULL;
+	}
+	return &chunkspool[next_chunk_index++];
+}
 
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
@@ -16,6 +49,8 @@ void uheap_init()
 		uheapPlaceStrategy = sys_get_uheap_strategy();
 		uheapPageAllocStart = dynAllocEnd + PAGE_SIZE;
 		uheapPageAllocBreak = uheapPageAllocStart;
+		LIST_INIT(&UserChunks);
+		next_chunk_index=0;
 
 		__firstTimeFlag = 0;
 	}
@@ -58,8 +93,86 @@ void* malloc(uint32 size)
 	//==============================================================
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #1 malloc
 	//Your code is here
+	uint32 alloc_size=ROUNDUP(size,PAGE_SIZE);
+	struct UserHeapChunk* ch;
+	struct UserHeapChunk* best=NULL;//worst fit
+	struct UserHeapChunk* same=NULL;//exact fit
+
+		LIST_FOREACH(ch,&UserChunks)
+		{
+			if(ch->isFree)
+			{
+				if(ch->size==alloc_size)
+				{
+					same=ch;
+					break;
+				}
+
+				if(ch->size > alloc_size)
+				{
+					if(best==NULL || ch->size > best->size)
+					{
+						best=ch;
+					}
+				}
+			}
+		}
+
+		uint32 va=0;
+
+		if(same!=NULL)
+		{
+			same->isFree=0;
+			va=same->startVA;
+		}
+		else if(best!=NULL)
+		{
+			struct UserHeapChunk* rest=allocChunk();
+			if(rest==NULL)
+			{
+				return NULL;
+			}
+
+			rest->startVA=best->startVA + alloc_size;
+			rest->size=best->size - alloc_size;
+			rest->isFree=1;
+
+			LIST_INSERT_AFTER(&UserChunks,best,rest);
+
+			best->size=alloc_size;
+			best->isFree=0;
+
+			va=best->startVA;
+		}
+		else
+		{
+			if (alloc_size > USER_HEAP_MAX - uheapPageAllocBreak)
+			{
+				return NULL;
+			}
+
+			struct UserHeapChunk *nn=allocChunk();
+			if(nn==NULL)
+			{
+				return NULL;
+			}
+			nn->startVA=uheapPageAllocBreak;
+			nn->size=alloc_size;
+			nn->isFree=0;
+
+			LIST_INSERT_TAIL(&UserChunks,nn);
+
+			va=nn->startVA;
+			uheapPageAllocBreak = uheapPageAllocBreak + alloc_size;
+		}
+
+		sys_allocate_user_mem(va,alloc_size);
+
+		return (void*)va;
+
+
 	//Comment the following line
-	panic("malloc() is not implemented yet...!!");
+	//panic("malloc() is not implemented yet...!!");
 }
 
 //=================================
@@ -69,8 +182,71 @@ void free(void* virtual_address)
 {
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #3 free
 	//Your code is here
+	uint32 va = (uint32)virtual_address;
+	if (va >= USER_HEAP_START && va < (USER_HEAP_START + DYN_ALLOC_MAX_SIZE))
+	{
+		free_block(virtual_address);
+		return;
+	}
+
+	struct UserHeapChunk* ch;
+	struct UserHeapChunk* it;
+	LIST_FOREACH(ch,&UserChunks)
+	{
+		if(ch->startVA==va)
+		{
+			if(ch->isFree)
+			{
+				return;
+			}
+			ch->isFree=1;
+
+			sys_free_user_mem(ch->startVA,ch->size);
+
+			struct UserHeapChunk* next=LIST_NEXT(ch);
+			if(next!= NULL && next->isFree)
+			{
+				ch->size+=next->size;
+				LIST_REMOVE(&UserChunks,next);
+			}
+
+			struct UserHeapChunk* prev=NULL;
+			LIST_FOREACH(it,&UserChunks)
+			{
+				if(LIST_NEXT(it)==ch)
+				{
+					prev=it;
+					break;
+				}
+			}
+
+			if(prev !=NULL && prev->isFree)
+			{
+				prev->size+=ch->size;
+				LIST_REMOVE(&UserChunks,ch);
+				ch=prev;
+			}
+
+			struct UserHeapChunk* last=NULL;
+			LIST_FOREACH(it,&UserChunks)
+			{
+				last=it;
+			}
+			if(last==ch && ch->isFree)
+			{
+				uheapPageAllocBreak=ch->startVA;
+				LIST_REMOVE(&UserChunks,ch);
+			}
+
+			return;
+
+		}
+	}
+
+			//panic("invalid address");
+
 	//Comment the following line
-	panic("free() is not implemented yet...!!");
+	//panic("free() is not implemented yet...!!");
 }
 
 //=================================
@@ -86,8 +262,97 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #2 smalloc
 	//Your code is here
+	uint32 alloc_size=ROUNDUP(size,PAGE_SIZE);
+
+	struct UserHeapChunk* ch;
+	struct UserHeapChunk* best=NULL;//worst fit
+	struct UserHeapChunk* same=NULL;//exact fit
+
+	LIST_FOREACH(ch,&UserChunks)
+	{
+		if(ch->isFree)
+		{
+			if(ch->size==alloc_size)
+			{
+				same=ch;
+				break;
+			}
+
+			if(ch->size > alloc_size)
+			{
+				if(best==NULL || ch->size > best->size)
+				{
+					best=ch;
+				}
+			}
+		}
+	}
+
+	uint32 va=0;
+
+	if(same!=NULL)
+	{
+		same->isFree=0;
+		va=same->startVA;
+	}
+	else if(best!=NULL)
+	{
+		struct UserHeapChunk* rest=allocChunk();
+		if(rest==NULL)
+		{
+			return NULL;
+		}
+
+		rest->startVA=best->startVA + alloc_size;
+		rest->size=best->size - alloc_size;
+		rest->isFree=1;
+
+		LIST_INSERT_AFTER(&UserChunks,best,rest);
+
+		best->size=alloc_size;
+		best->isFree=0;
+
+		va=best->startVA;
+	}
+	else
+	{
+		if (alloc_size > USER_HEAP_MAX - uheapPageAllocBreak)
+		{
+			return NULL;
+		}
+
+		struct UserHeapChunk *nn=allocChunk();
+		if(nn==NULL)
+		{
+			return NULL;
+		}
+		nn->startVA=uheapPageAllocBreak;
+		nn->size=alloc_size;
+		nn->isFree=0;
+
+		LIST_INSERT_TAIL(&UserChunks,nn);
+
+		va=nn->startVA;
+		uheapPageAllocBreak = uheapPageAllocBreak + alloc_size;
+	}
+
+	int id=sys_create_shared_object(sharedVarName,size,isWritable,(void*)va);
+	if(id<0)
+	{
+		LIST_FOREACH(ch,&UserChunks)
+		{
+			if(ch->startVA==va)
+			{
+				ch->isFree=1;
+				break;
+			}
+		}
+		return NULL;
+	}
+
+	return (void*)va;
 	//Comment the following line
-	panic("smalloc() is not implemented yet...!!");
+	//panic("smalloc() is not implemented yet...!!");
 }
 
 //========================================
@@ -102,8 +367,105 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #4 sget
 	//Your code is here
+	int size=sys_size_of_shared_object(ownerEnvID,sharedVarName);
+	if(size<0)
+	{
+		return NULL;
+	}
+
+	uint32 alloc_size=ROUNDUP(size,PAGE_SIZE);
+
+		struct UserHeapChunk* ch;
+		struct UserHeapChunk* best=NULL;//worst fit
+		struct UserHeapChunk* same=NULL;//exact fit
+
+		LIST_FOREACH(ch,&UserChunks)
+		{
+			if(ch->isFree)
+			{
+				if(ch->size==alloc_size)
+				{
+					same=ch;
+					break;
+				}
+
+				if(ch->size > alloc_size)
+				{
+					if(best==NULL || ch->size > best->size)
+					{
+						best=ch;
+					}
+				}
+			}
+		}
+
+
+		uint32 va=0;
+
+			if(same!=NULL)
+			{
+				same->isFree=0;
+				va=same->startVA;
+			}
+			else if(best!=NULL)
+			{
+				struct UserHeapChunk* rest=allocChunk();
+				if(rest==NULL)
+				{
+					return NULL;
+				}
+
+				rest->startVA=best->startVA + alloc_size;
+				rest->size=best->size - alloc_size;
+				rest->isFree=1;
+
+				LIST_INSERT_AFTER(&UserChunks,best,rest);
+
+				best->size=alloc_size;
+				best->isFree=0;
+
+				va=best->startVA;
+			}
+			else
+			{
+				if (alloc_size > USER_HEAP_MAX - uheapPageAllocBreak)
+				{
+					return NULL;
+				}
+
+				struct UserHeapChunk *nn=allocChunk();
+				if(nn==NULL)
+				{
+					return NULL;
+				}
+				nn->startVA=uheapPageAllocBreak;
+				nn->size=alloc_size;
+				nn->isFree=0;
+
+				LIST_INSERT_TAIL(&UserChunks,nn);
+
+				va=nn->startVA;
+				uheapPageAllocBreak = uheapPageAllocBreak + alloc_size;
+			}
+
+			int id=sys_get_shared_object(ownerEnvID,sharedVarName,(void*)va);
+
+			if(id<0)
+			{
+				LIST_FOREACH(ch,&UserChunks)
+				{
+					if(ch->startVA==va)
+					{
+						ch->isFree=1;
+						break;
+					}
+				}
+				return NULL;
+			}
+
+			return (void*)va;
 	//Comment the following line
-	panic("sget() is not implemented yet...!!");
+	//panic("sget() is not implemented yet...!!");
 }
 
 

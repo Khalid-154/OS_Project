@@ -37,6 +37,11 @@ void tlb_invalidate(uint32 *ptr_page_directory, void *virtual_address)
 	if (!e || e->env_page_directory == ptr_page_directory)
 		invlpg(virtual_address);
 }
+///******************************* USER HEAP PAGE : FUNCTION*******************************
+bool is_user_heap_page(uint32 va)
+{
+	return (va >= USER_HEAP_START && va < USER_HEAP_MAX);
+}
 
 ///******************************* MAPPING USER SPACE *******************************
 

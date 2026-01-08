@@ -53,6 +53,8 @@ void enqueue(struct Env_Queue* queue, struct Env* env)
 	if(env != NULL)
 	{
 		LIST_INSERT_HEAD(queue, env);
+		// reset the Env_quantums //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		env->Env_quantums = 0;
 	}
 }
 
@@ -685,20 +687,35 @@ int get_load_average()
 /********* for BSD Priority Scheduler *************/
 
 //==================================================================================//
-
 /*2024*/
 /********* for Priority RR Scheduler *************/
-void env_set_priority(int envID, int priority)
+void env_set_priority(int32 envID, int priority)
 {
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 env_set_priority
-	//Your code is here
-	//Comment the following line
-	panic("env_set_priority() is not implemented yet...!!");
+	//panic("env_set_priority() is not implemented yet...!!");///////////////////////////////////////////////////env_set_priority() --- DONE
+	struct Env *e;
+
+	envid2env( envID, &e,0);
+
+	if(e ==NULL||e->priority == priority)
+		return;
+
+	acquire_kspinlock(&ProcessQueues.qlock);
+	if(e->env_status == ENV_READY){
+	sched_remove_ready(e);
+	e->priority = priority;
+	sched_insert_ready(e);
+	}
+	else{
+	e->priority = priority;
+	}
+	release_kspinlock(&ProcessQueues.qlock);
 }
 void sched_set_starv_thresh(uint32 starvThresh)
 {
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 sched_set_starv_thresh
-	//Your code is here
-	//Comment the following line
-	panic("sched_set_starv_thresh() is not implemented yet...!!");
+	//panic("sched_set_starv_thresh() is not implemented yet...!!"); //////////////////////////////////////////////sched_set_starv_thresh --- DONE
+	glopal_starvation_thresh = starvThresh;
+
+
 }

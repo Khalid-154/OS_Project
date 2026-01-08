@@ -11,12 +11,23 @@
 #define DYN_ALLOC_MAX_SIZE (32<<20) 					//32 MB
 #define DYN_ALLOC_MIN_BLOCK_SIZE (1<<LOG2_MIN_SIZE)		//8 BYTE
 #define DYN_ALLOC_MAX_BLOCK_SIZE (1<<LOG2_MAX_SIZE) 	//2 KB
-
+struct PageAllocChunk
+{
+	LIST_ENTRY(PageAllocChunk) prev_next_info;	/* linked list links */
+	    uint32 Size_limit;
+		bool is_free;
+		int num_pages;
+		uint32 st_Va;
+};
+LIST_HEAD(PageAllocChunk_List, PageAllocChunk);
+struct PageAllocChunk_List Page_Alloc_Chunks ;
 //[2] Data Structures
 struct BlockElement
 {
 	LIST_ENTRY(BlockElement) prev_next_info;	/* linked list links */
 };
+
+
 LIST_HEAD(BlockElement_List, BlockElement);
 struct BlockElement_List freeBlockLists[LOG2_MAX_SIZE - LOG2_MIN_SIZE + 1] ;
 
@@ -37,7 +48,8 @@ uint32 dynAllocEnd;
 /*FUNCTIONS*/
 //=============================================================================
 /*2025*/ //GIVEN FUNCTIONS
-uint32 to_page_va(struct PageInfoElement* ptrPageInfo);
+__inline__ uint32 to_page_va(struct PageInfoElement *ptrPageInfo);
+__inline__ struct PageInfoElement * to_page_info(uint32 va);
 
 //KERNEL: implemented inside kern/mem/kheap.c
 //USER: implemented inside kern/mem/uheap.c

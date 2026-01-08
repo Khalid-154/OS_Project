@@ -12,30 +12,25 @@
 #include "../cpu/cpu.h"
 #include "../proc/user_environment.h"
 
-void init_ksemaphore(struct ksemaphore *ksem, int value, char *name)
-{
+void init_ksemaphore(struct ksemaphore *ksem, int value, char *name) {
 	init_channel(&(ksem->chan), "ksemaphore channel");
 	init_kspinlock(&(ksem->lk), "lock of ksemaphore");
 	strcpy(ksem->name, name);
 	ksem->count = value;
 }
 
-void wait_ksemaphore(struct ksemaphore *ksem)
-{
-	//TODO: [PROJECT'25.IM#5] KERNEL PROTECTION: #6 SEMAPHORE - wait_ksemaphore
-	//Your code is here
-	//Comment the following line
-	panic("wait_ksemaphore() is not implemented yet...!!");
-
+void wait_ksemaphore(struct ksemaphore *Ksemaphore) {
+	acquire_kspinlock(&(Ksemaphore->lk));
+	Ksemaphore->count--;
+	if (Ksemaphore->count < 0)
+		sleep(&(Ksemaphore->chan), &(Ksemaphore->lk));
+	release_kspinlock(&(Ksemaphore->lk));
 }
 
-void signal_ksemaphore(struct ksemaphore *ksem)
-{
-	//TODO: [PROJECT'25.IM#5] KERNEL PROTECTION: #7 SEMAPHORE - signal_ksemaphore
-	//Your code is here
-	//Comment the following line
-	panic("signal_ksemaphore() is not implemented yet...!!");
-
+void signal_ksemaphore(struct ksemaphore *Ksemaphore) {
+	acquire_kspinlock(&(Ksemaphore->lk));
+	Ksemaphore->count++;
+	if (Ksemaphore->count <= 0)
+		wakeup_one(&(Ksemaphore->chan));
+	release_kspinlock(&(Ksemaphore->lk));
 }
-
-

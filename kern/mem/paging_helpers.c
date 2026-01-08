@@ -53,7 +53,18 @@ inline int pt_get_page_permissions(uint32* directory, uint32 virtual_address )
 {
 	//TODO: PRACTICE: fill this function.
 	//Comment the following line
-	panic("pt_get_page_permissions() is not implemented yet!");
+	//panic("pt_get_page_permissions() is not implemented yet!");
+    uint32 *ptr_page_table = NULL;
+    int ret16 = get_page_table(directory, virtual_address, &ptr_page_table);
+
+    if (ret16 == TABLE_NOT_EXIST || ptr_page_table == NULL)
+        return -1;
+
+    uint32 page_t_entry = ptr_page_table[PTX(virtual_address)];
+    int perms = page_t_entry & 0xFFF;
+
+    return perms;
+
 }
 
 //===============================
@@ -67,7 +78,20 @@ inline void pt_clear_page_table_entry(uint32* directory, uint32 virtual_address)
 {
 	//TODO: PRACTICE: fill this function.
 	//Comment the following line
-	panic("pt_clear_page_table_entry() is not implemented yet!");
+	//panic("pt_clear_page_table_entry() is not implemented yet!");
+    uint32 *ptr_page_table = NULL;
+
+    int ret = get_page_table(directory, virtual_address, &ptr_page_table);
+
+    if (ret == TABLE_NOT_EXIST || ptr_page_table == NULL)
+        return;
+
+    uint32 page_entry_index = PTX(virtual_address);
+
+    ptr_page_table[page_entry_index] = 0;
+
+    tlb_invalidate(directory, (void*)virtual_address);
+
 }
 
 /***********************************************************************************************/

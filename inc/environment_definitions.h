@@ -24,7 +24,6 @@
 // All real environments are greater than 0 (so the sign bit is zero).
 // envid_ts less than 0 signify errors.
 
-
 //Sizes of working sets & LRU 2nd list [if NO KERNEL HEAP]
 #define __TWS_MAX_SIZE 	50
 #define __PWS_MAX_SIZE 	5000
@@ -60,13 +59,15 @@ uint32 old_pf_counter;
 struct WorkingSetElement {
 	unsigned int virtual_address;
 	uint8 empty;
+
 	//2012
-	unsigned int time_stamp ;
+	unsigned int time_stamp;
 
 	//2021
 	unsigned int sweeps_counter;
 	//2020
-	LIST_ENTRY(WorkingSetElement) prev_next_info;	// list link pointers
+	LIST_ENTRY(WorkingSetElement)
+	prev_next_info;	// list link pointers
 };
 
 //2020
@@ -75,9 +76,10 @@ LIST_HEAD(WS_List, WorkingSetElement);		// Declares 'struct WS_list'
 /*2025*/
 struct PageRefElement {
 	unsigned int virtual_address;
-	LIST_ENTRY(PageRefElement) prev_next_info;	// list link pointers
+	LIST_ENTRY(PageRefElement)
+	prev_next_info;	// list link pointers
 };
-LIST_HEAD(PageRef_List, PageRefElement);		// Declares 'struct PageRef_List'
+LIST_HEAD(PageRef_List, PageRefElement);	// Declares 'struct PageRef_List'
 
 //======================================================================
 
@@ -93,36 +95,37 @@ LIST_HEAD(PageRef_List, PageRefElement);		// Declares 'struct PageRef_List'
 // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
 // but it is on the stack and initialize_environment() manipulates it.
 struct Context {
-  uint32 edi;
-  uint32 esi;
-  uint32 edx;
-  uint32 ecx;
-  uint32 ebx;
-  uint32 eax;
-  uint32 ebp;
-  uint32 eip;
+	uint32 edi;
+	uint32 esi;
+	uint32 edx;
+	uint32 ecx;
+	uint32 ebx;
+	uint32 eax;
+	uint32 ebp;
+	uint32 eip;
 };
 
 struct Env {
 	//================
 	/*MAIN INFO...*/
 	//================
-	struct Trapframe *env_tf;		// Saved registers during the trap (at the top of the user kernel stack)
-	struct Context *context;		// Saved registers for context switching (env <--> scheduler) (below the trap frame at the user kernel stack)
-	LIST_ENTRY(Env) prev_next_info;	// Free list link pointers
+	struct Trapframe *env_tf;// Saved registers during the trap (at the top of the user kernel stack)
+	struct Context *context;// Saved registers for context switching (env <--> scheduler) (below the trap frame at the user kernel stack)
+	LIST_ENTRY(Env)
+	prev_next_info;	// Free list link pointers
 	int32 env_id;					// Unique environment identifier
 	int32 env_parent_id;			// env_id of this env's parent
 	unsigned env_status;			// Status of the environment
 	int priority;					// Current priority
-	char prog_name[PROGNAMELEN];	// Program name (to print it via USER.cprintf in multitasking)
-	void* channel;					// Address of the channel that it's blocked (sleep) on it
+	char prog_name[PROGNAMELEN];// Program name (to print it via USER.cprintf in multitasking)
+	void* channel;	// Address of the channel that it's blocked (sleep) on it
 
 	//================
 	/*ADDRESS SPACE*/
 	//================
 	uint32 *env_page_directory;		// Kernel virtual address of page dir
 	uint32 env_cr3;					// Physical address of page dir
-	uint32 initNumStackPages ;		// Initial number of allocated stack pages
+	uint32 initNumStackPages;		// Initial number of allocated stack pages
 	char* kstack;					//Bottom of kernel stack for this process
 									//(to be dynamically allocated during the process creation)
 									//Its first page is ALWAYS used as a GUARD PAGE (i.e. unmapped)
@@ -143,42 +146,51 @@ struct Env {
 	//page working set management
 	unsigned int page_WS_max_size;					//Max allowed size of WS
 #if USE_KHEAP
-	struct WS_List page_WS_list ;					//List of WS elements
+	struct WS_List page_WS_list;					//List of WS elements
 	struct WorkingSetElement* page_last_WS_element;	//ptr to last inserted WS element
-	struct PageRef_List referenceStreamList;		//List of page references stream to be used for OPTIMAL replacement strategy
-	uint32 *prepagedVAs;							//Initial virtual addresses after fetching the process into RAM
+	uint8 prp;
+
+	struct PageRef_List referenceStreamList;//List of page references stream to be used for OPTIMAL replacement strategy
+	uint32 *prepagedVAs;//Initial virtual addresses after fetching the process into RAM
 	uint32 numOfPrepagedVAs;						//Number of prepaged VAs
+
 #else
 	struct WorkingSetElement ptr_pageWorkingSet[__PWS_MAX_SIZE];
 	//uint32 page_last_WS_index;
-	struct WS_List PageWorkingSetList ;	//LRU Approx: List of available WS elements
+	struct WS_List PageWorkingSetList;//LRU Approx: List of available WS elements
 	uint32 page_last_WS_index;
+	uint8 prp;
+
 #endif
 
 	//table working set management
-	struct WorkingSetElement __ptr_tws[__TWS_MAX_SIZE];
+	struct WorkingSetElement __ptr_tws[__TWS_MAX_SIZE ];
 	uint32 table_last_WS_index;
 
 	//2020: Data structures of LRU Approx replacement policy
-	struct WS_List ActiveList ;		//LRU Approx: ActiveList that should work as FCFS
-	struct WS_List SecondList ;		//LRU Approx: SecondList that should work as LRU
-	int ActiveListSize ;			//LRU Approx: Max allowed size of ActiveList
-	int SecondListSize ;			//LRU Approx: Max allowed size of SecondList
+	struct WS_List ActiveList;//LRU Approx: ActiveList that should work as FCFS
+	struct WS_List SecondList;	//LRU Approx: SecondList that should work as LRU
+	int ActiveListSize;			//LRU Approx: Max allowed size of ActiveList
+	int SecondListSize;			//LRU Approx: Max allowed size of SecondList
 
 	//2016
 	struct WorkingSetElement* __uptr_pws;
 
 	//Percentage of WS pages to be removed [either for scarce RAM or Full WS]
-		unsigned int percentage_of_WS_pages_to_be_removed;
+	unsigned int percentage_of_WS_pages_to_be_removed;
 
 	//==================
 	/*CPU BSD Sched...*/
 	//==================
-
+	// USER HEAP
+	#define MAX_USER_BLOCKS 1024
+	void* heap_blocks[MAX_USER_BLOCKS];
+	int num_heap_blocks;
 	//==================
 	/*CPU PRIORITY RR Sched...*/
 	//==================
-
+// created by uosef mohamed
+	uint8 Env_quantums;
 	//================
 	/*STATISTICS...*/
 	//================
@@ -191,7 +203,7 @@ struct Env {
 	uint32 env_runs;			// Number of times environment has run
 	//2020
 	uint32 nPageIn, nPageOut, nNewPageAdded;
-	uint32 nClocks ;
+	uint32 nClocks;
 
 };
 

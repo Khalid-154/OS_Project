@@ -17,9 +17,9 @@ int get_load_average() ;
 /********* for BSD Priority Scheduler *************/
 
 /*2024*/
-void env_set_priority(int envID, int priority);
+void env_set_priority(int32 envID, int priority);
 void sched_set_starv_thresh(uint32 starvThresh);
-
+uint32 glopal_starvation_thresh;
 
 //void sched_insert_ready0(struct Env* env);
 void sched_insert_ready(struct Env* env);

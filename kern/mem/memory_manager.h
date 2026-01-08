@@ -28,6 +28,9 @@
 #define TABLE_NOT_EXIST 1
 
 //***********************************
+//******USER HEAP PAGE FUNCTION******
+bool is_user_heap_page(uint32 va);
+//***********************************
 /*2015*/ //USER HEAP STRATEGIES
 uint32 _UHeapPlacementStrategy;
 /*2025*/ //Replaced by setter & getter function

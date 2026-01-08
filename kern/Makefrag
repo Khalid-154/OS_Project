@@ -105,14 +105,14 @@ $(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld
 	$(V)$(NM) -n $@ > $@.sym
 
 # How to build the Bochs disk image (210000)
-$(OBJDIR)/fos.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
+$(OBJDIR)/kern/bochs.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
 	@echo + mk $@
-	$(V)dd if=/dev/zero of=$(OBJDIR)/fos.img~ count=1110000 2>/dev/null
-	$(V)dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/fos.img~ conv=notrunc 2>/dev/null
-	$(V)dd if=$(OBJDIR)/kern/kernel of=$(OBJDIR)/fos.img~ seek=1 conv=notrunc 2>/dev/null
-	$(V)mv $(OBJDIR)/fos.img~ $(OBJDIR)/fos.img
+	$(V)dd if=/dev/zero of=$(OBJDIR)/kern/bochs.img~ count=1110000 2>/dev/null
+	$(V)dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/kern/bochs.img~ conv=notrunc 2>/dev/null
+	$(V)dd if=$(OBJDIR)/kern/kernel of=$(OBJDIR)/kern/bochs.img~ seek=1 conv=notrunc 2>/dev/null
+	$(V)mv $(OBJDIR)/kern/bochs.img~ $(OBJDIR)/kern/bochs.img
 
-all: $(OBJDIR)/fos.img
+all: $(OBJDIR)/kern/bochs.img
 
 
 grub: $(OBJDIR)/fos-grub

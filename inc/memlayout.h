@@ -216,6 +216,8 @@ struct FrameInfo {
 	uint16 references;
 	struct Env *proc;
 	unsigned char isBuffered;
+	// added by(uosef mohamed) to keep track page va
+		uint32 frame_virt_addr;
 };
 
 #endif /* !__ASSEMBLER__ */

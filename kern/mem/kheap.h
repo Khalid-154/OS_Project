@@ -7,7 +7,6 @@
 
 #include <inc/types.h>
 
-
 /*2017*/
 //Values for user heap placement strategy
 #define KHP_PLACE_CONTALLOC 0x0
@@ -18,13 +17,17 @@
 #define KHP_PLACE_CUSTOMFIT 0x5
 
 //TODO: [PROJECT'25.GM#2] KERNEL HEAP - #0 Page Alloc Limits [GIVEN]
-uint32 kheapPageAllocStart ;
-uint32 kheapPageAllocBreak ;
+uint32 kheapPageAllocStart;
+uint32 kheapPageAllocBreak;
 uint32 kheapPlacementStrategy;
 
 /*2025*/ //Replaced by setter & getter function
-static inline void set_kheap_strategy(uint32 strategy){kheapPlacementStrategy = strategy;}
-static inline uint32 get_kheap_strategy(){return kheapPlacementStrategy ;}
+static inline void set_kheap_strategy(uint32 strategy) {
+	kheapPlacementStrategy = strategy;
+}
+static inline uint32 get_kheap_strategy() {
+	return kheapPlacementStrategy;
+}
 
 //***********************************
 void kheap_init();
@@ -36,7 +39,6 @@ void *krealloc(void *virtual_address, unsigned int new_size);
 unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
 
-int numOfKheapVACalls ;
-
+int numOfKheapVACalls;
 
 #endif // FOS_KERN_KHEAP_H_
