@@ -9,7 +9,7 @@
 #include <kern/conc/ksemaphore.h>
 
 #define SECTSIZE	512			// bytes per disk sector
-#define BLKSECTS	(BLKSIZE / SECTSIZE)	// sectors per block
+#define BLKSECTS	(BLKSIZE / SECTSIZE)	// sec  tors per block
 
 /* Disk block n, when in memory, is mapped into the file system
  * server's address space at DISKMAP + (n*BLKSIZE). */
